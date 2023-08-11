@@ -39,4 +39,4 @@ FROM gcr.io/distroless/static:latest@sha256:7198a357ff3a8ef750b041324873960cf215
 
 COPY --from=builder /app/eventrouter /app/eventrouter
 
-CMD ["/bin/sh", "-c", "/app/eventrouter -v 3 -logtostderr"]
+CMD ["/app/eventrouter", "-v=3", "-logtostderr"]
