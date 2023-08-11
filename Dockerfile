@@ -12,12 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM alpine:3.9
-MAINTAINER Timothy St. Clair "tstclair@heptio.com"  
+FROM --platform=$BUILDPLATFORM golang:1.20-alpine3.18@sha256:7839c9f01b5502d7cb5198b2c032857023424470b3e31ae46a8261ffca72912a AS builder
+
+RUN apk add --update --no-cache ca-certificates make git curl
+
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETPLATFORM
 
 WORKDIR /app
-RUN apk update --no-cache && apk add ca-certificates
-ADD eventrouter /app/
-USER nobody:nobody
+
+ARG GOPROXY
+
+COPY go.mod go.mod
+COPY go.sum go.sum
+
+RUN go mod download
+
+COPY *.go /app/
+COPY sinks/ /app/sinks/
+COPY Makefile /app/Makefile
+
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH make build
+
+FROM gcr.io/distroless/static:latest@sha256:7198a357ff3a8ef750b041324873960cf2153c11cc50abb9d8d5f8bb089f6b4e
+
+COPY --from=builder /app/eventrouter /app/eventrouter
 
 CMD ["/bin/sh", "-c", "/app/eventrouter -v 3 -logtostderr"]
