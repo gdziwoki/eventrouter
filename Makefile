@@ -14,7 +14,7 @@
 
 TARGET ?= eventrouter
 
-all: vet test build
+all: vet test
 
 .PHONY:
 build:
