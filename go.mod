@@ -1,6 +1,6 @@
 module github.com/heptiolabs/eventrouter
 
-go 1.20
+go 1.23.6
 
 require (
 	github.com/Azure/azure-event-hubs-go/v2 v2.0.3
