@@ -32,21 +32,14 @@ Eventrouter is a Kubernetes-native Go application that watches Kubernetes events
 
 ### Available Sinks
 Located in `sinks/` directory:
-- `glogsink.go` - Default glog output (default sink)
-- `stdoutsink.go` - Standard output
-- `httpsink.go` - HTTP endpoints
-- `kafkasink.go` - Apache Kafka
-- `influxdb.go` - InfluxDB time series database
-- `eventhub.go` - Azure Event Hubs
-- `s3sink.go` - Amazon S3
-- `rocksetsink.go` - Rockset real-time analytics
+- `stdoutsink.go` - Standard output (only available sink)
 
 ### Configuration System
 - **Config files**: `/etc/eventrouter/config.json` or `./config.json`
 - **Environment variables**: Supported via Viper
 - **Command-line flags**: Limited set for metrics listening address
 - **Default values**:
-  - Sink: `glog`
+  - Sink: `stdout`
   - Resync interval: 30 minutes
   - Prometheus metrics: enabled
   - Listen address: `:8080`
@@ -81,30 +74,24 @@ All sinks implement `EventSinkInterface` (`sinks/interfaces.go`) with methods:
 
 ## Configuration Examples
 
-### Basic glog output (default)
+### Basic stdout output (default)
 ```json
 {
-  "sink": "glog"
+  "sink": "stdout"
 }
 ```
 
-### Kafka sink with custom config
+### Stdout with namespace wrapping
 ```json
 {
-  "sink": "kafka",
-  "kafkabrokers": "kafka:9092",
-  "kafkatopic": "kubernetes-events"
+  "sink": "stdout",
+  "stdoutJSONNamespace": "kubernetes"
 }
 ```
 
 ## Testing Strategy
 
-Tests are located in `tests/` directory and focus on:
-- Sink-specific functionality testing
-- Integration testing with different backends
-- Configuration validation
-
-Use `go test ./... -v -timeout 60s` to run the full test suite with proper timeouts.
+Use `go test ./... -v -timeout 60s` to run the full test suite with proper timeouts. The project is now simplified and focuses on core event routing functionality.
 
 ## Deployment Notes
 
