@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go version)",
+      "Bash(make)",
+      "Bash(make:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(go clean:*)",
+      "Bash(go mod why:*)",
+      "Bash(go mod:*)",
+      "Bash(./eventrouter --help)",
+      "Bash(go get:*)",
+      "Read(//Users/grzegorz.dziwoki/go/pkg/mod/github.com/rockset/rockset-go-client@v0.26.0/**)",
+      "Bash(CGO_ENABLED=0 go build:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

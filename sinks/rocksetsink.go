@@ -17,12 +17,12 @@ limitations under the License.
 package sinks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 
-	apiclient "github.com/rockset/rockset-go-client"
-	models "github.com/rockset/rockset-go-client/lib/go"
+	rockset "github.com/rockset/rockset-go-client"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -34,7 +34,7 @@ Rockset can later be used with
 many different connectors such as Tableau or Redash to use this data.
 */
 type RocksetSink struct {
-	client                *apiclient.RockClient
+	client                *rockset.RockClient
 	rocksetCollectionName string
 	rocksetWorkspaceName  string
 }
@@ -42,7 +42,11 @@ type RocksetSink struct {
 // NewRocksetSink will create a new RocksetSink with default options, returned as
 // an EventSinkInterface
 func NewRocksetSink(rocksetAPIKey string, rocksetCollectionName string, rocksetWorkspaceName string) EventSinkInterface {
-	client := apiclient.Client(rocksetAPIKey, "https://api.rs2.usw2.rockset.com")
+	client, err := rockset.NewClient(rockset.WithAPIKey(rocksetAPIKey))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create Rockset client: %v\n", err)
+		return nil
+	}
 	return &RocksetSink{
 		client:                client,
 		rocksetCollectionName: rocksetCollectionName,
@@ -60,11 +64,12 @@ func (rs *RocksetSink) UpdateEvents(eNew *v1.Event, eOld *v1.Event) {
 		docs := []interface{}{
 			m,
 		}
-		dinfo := models.AddDocumentsRequest{
-			Data: docs,
+		ctx := context.Background()
+		_, err := rs.client.AddDocuments(ctx, rs.rocksetWorkspaceName, rs.rocksetCollectionName, docs)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to add document to Rockset: %v\n", err)
 		}
-		rs.client.Documents.Add(rs.rocksetWorkspaceName, rs.rocksetCollectionName, dinfo)
 	} else {
-		fmt.Fprintf(os.Stderr, "Failed to json serialize event: %v", err)
+		fmt.Fprintf(os.Stderr, "Failed to json serialize event: %v\n", err)
 	}
 }
