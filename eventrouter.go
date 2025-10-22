@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/golang/glog"
 	"github.com/heptiolabs/eventrouter/sinks"
@@ -34,6 +35,9 @@ import (
 )
 
 var (
+	// Ensures Prometheus metrics are registered only once
+	prometheusOnce sync.Once
+
 	kubernetesWarningEventCounterVec = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "heptio_eventrouter_warnings_total",
 		Help: "Total number of warning events in the kubernetes cluster",
@@ -100,10 +104,12 @@ type EventRouter struct {
 func NewEventRouter(kubeClient kubernetes.Interface, eventsInformer coreinformers.EventInformer,
 	lastSeenResourceVersion string, lastResourceVersionPosition func(rv string)) *EventRouter {
 	if viper.GetBool("enable-prometheus") {
-		prometheus.MustRegister(kubernetesWarningEventCounterVec)
-		prometheus.MustRegister(kubernetesNormalEventCounterVec)
-		prometheus.MustRegister(kubernetesInfoEventCounterVec)
-		prometheus.MustRegister(kubernetesUnknownEventCounterVec)
+		prometheusOnce.Do(func() {
+			prometheus.MustRegister(kubernetesWarningEventCounterVec)
+			prometheus.MustRegister(kubernetesNormalEventCounterVec)
+			prometheus.MustRegister(kubernetesInfoEventCounterVec)
+			prometheus.MustRegister(kubernetesUnknownEventCounterVec)
+		})
 	}
 
 	er := &EventRouter{
