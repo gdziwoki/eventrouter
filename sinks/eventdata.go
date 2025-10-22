@@ -47,4 +47,3 @@ func NewEventData(eNew *v1.Event, eOld *v1.Event) EventData {
 
 	return eData
 }
-

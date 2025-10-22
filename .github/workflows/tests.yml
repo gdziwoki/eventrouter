@@ -1,0 +1,133 @@
+name: Enhanced Testing
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  # Allow manual triggering
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.25'
+
+jobs:
+  # Extended test matrix (complements existing CI)
+  test-matrix:
+    name: Extended Test Matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.24', '1.25']
+        test-type: ['unit', 'integration', 'coverage']
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+
+    - name: Run ${{ matrix.test-type }} tests
+      run: |
+        case "${{ matrix.test-type }}" in
+          "unit")
+            make unit-test
+            ;;
+          "integration")
+            make integration-test
+            ;;
+          "coverage")
+            if [ "${{ matrix.go-version }}" == "${{ env.GO_VERSION }}" ]; then
+              make test-coverage
+              echo "Coverage results:" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              go tool cover -func=coverage.out | tail -n 5 >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            else
+              echo "Skipping coverage for Go ${{ matrix.go-version }}"
+            fi
+            ;;
+        esac
+
+    - name: Upload coverage (Go 1.25 only)
+      uses: codecov/codecov-action@v4
+      if: matrix.test-type == 'coverage' && matrix.go-version == env.GO_VERSION
+      with:
+        file: ./coverage.out
+        flags: unittests
+        fail_ci_if_error: false
+
+  # Race condition detection
+  race-detection:
+    name: Race Condition Detection
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Run tests with race detection
+      run: make test-race
+
+    - name: Report results
+      run: echo "✅ No race conditions detected" >> $GITHUB_STEP_SUMMARY
+
+  # Quick benchmarks (subset for PR validation)
+  benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' # Only on push, not PRs (too slow)
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Run benchmarks (quick)
+      run: |
+        echo "## 📊 Performance Results" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        timeout 120s make benchmark 2>&1 | head -n 30 >> $GITHUB_STEP_SUMMARY || echo "Benchmark timeout (expected)" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # Enhanced testing summary
+  testing-summary:
+    name: Testing Summary
+    runs-on: ubuntu-latest
+    needs: [test-matrix, race-detection]
+    if: always()
+    steps:
+    - name: Generate summary
+      run: |
+        echo "## 🧪 Enhanced Testing Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Test Matrix Status:** ${{ needs.test-matrix.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Race Detection:** ${{ needs.race-detection.result }}" >> $GITHUB_STEP_SUMMARY
+
+        if [[ "${{ needs.test-matrix.result }}" == "success" && "${{ needs.race-detection.result }}" == "success" ]]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **All enhanced tests passed!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The enhanced test suite complements the main CI pipeline:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Multi-version Go compatibility" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Comprehensive unit & integration tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Code coverage analysis" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Race condition detection" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "❌ **Some enhanced tests failed**" >> $GITHUB_STEP_SUMMARY
+        fi

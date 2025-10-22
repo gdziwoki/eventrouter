@@ -1,0 +1,29 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 65%
+        threshold: 5%
+    patch:
+      default:
+        target: 70%
+        threshold: 10%
+
+comment:
+  layout: "header, diff, flags, files, footer"
+  behavior: default
+  require_changes: false
+
+flags:
+  unittests:
+    paths:
+      - "."
+
+ignore:
+  - "**/*_test.go"
+  - "**/benchmark_test.go"
+  - "**/integration_test.go"
+  - "vendor/"
+
+round: down
+precision: 1

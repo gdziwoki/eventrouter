@@ -51,7 +51,7 @@ func sigHandler() <-chan struct{} {
 			syscall.SIGSEGV, // FullDerp
 			syscall.SIGABRT, // Abnormal termination
 			syscall.SIGILL,  // illegal instruction
-			syscall.SIGFPE) // floating point - this is why we can't have nice things
+			syscall.SIGFPE)  // floating point - this is why we can't have nice things
 		sig := <-c
 		glog.Warningf("Signal (%v) Detected, Shutting Down", sig)
 		close(stop)
